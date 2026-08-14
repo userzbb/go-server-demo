@@ -37,10 +37,19 @@ func (s *Session) SetLogger(l Logger) {
 	s.logger = l
 }
 
-// logf 输出网络层日志，优先使用注入的 Logger
-func (s *Session) logf(format string, args ...any) {
+// logInfo 输出普通级别日志，优先使用注入的 Logger
+func (s *Session) logInfo(format string, args ...any) {
 	if s.logger != nil {
-		s.logger.Printf(format, args...)
+		s.logger.Infof(format, args...)
+		return
+	}
+	log.Printf(format, args...)
+}
+
+// logError 输出错误级别日志，优先使用注入的 Logger
+func (s *Session) logError(format string, args ...any) {
+	if s.logger != nil {
+		s.logger.Errorf(format, args...)
 		return
 	}
 	log.Printf(format, args...)
@@ -56,6 +65,11 @@ func (s *Session) Send(data []byte) {
 	buf := make([]byte, len(data))
 	copy(buf, data)
 	s.sendChan <- buf
+}
+
+// SendMessage 编码并发送一条完整消息（4字节总长度 + 4字节消息ID + body）
+func (s *Session) SendMessage(msgID uint32, body []byte) {
+	s.Send(Encode(msgID, body))
 }
 
 // Close 关闭连接并释放资源
@@ -89,7 +103,7 @@ func (s *Session) handleRead() {
 	for {
 		n, err := s.conn.Read(buf)
 		if err != nil {
-			s.logf("读取错误: %v", err)
+			s.logError("读取错误: %v", err)
 			break
 		}
 
@@ -98,7 +112,7 @@ func (s *Session) handleRead() {
 		for len(buffer) >= 8 {
 			totalLen := int(binary.BigEndian.Uint32(buffer[0:4]))
 			if totalLen < 8 || totalLen > MaxPacketSize {
-				s.logf("非法包长度: %d，关闭连接", totalLen)
+				s.logError("非法包长度: %d，关闭连接", totalLen)
 				s.Close()
 				return
 			}
@@ -111,11 +125,11 @@ func (s *Session) handleRead() {
 
 			msgID, body, err := Decode(packet)
 			if err != nil {
-				s.logf("拆包错误: %v", err)
+				s.logError("拆包错误: %v", err)
 				continue
 			}
 
-			s.logf("收到消息 [ID=%d] 长度=%d 内容=%s", msgID, len(body), string(body))
+			s.logInfo("收到消息 [ID=%d] 长度=%d 内容=%s", msgID, len(body), string(body))
 
 			if s.onMessage != nil {
 				s.onMessage(msgID, body)
@@ -130,7 +144,7 @@ func (s *Session) handleWrite() {
 	for data := range s.sendChan {
 		_, err := s.conn.Write(data)
 		if err != nil {
-			s.logf("发送错误: %v", err)
+			s.logError("发送错误: %v", err)
 			s.Close()
 			break
 		}
