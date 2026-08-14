@@ -14,6 +14,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  mongodb:
+    image: mongo:7
+    container_name: omega-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: omega
+      MONGO_INITDB_ROOT_PASSWORD: omega123
+      MONGO_INITDB_DATABASE: omega
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: omega-redis
@@ -25,4 +38,5 @@ services:
 
 volumes:
   postgres_data:
+  mongo_data:
   redis_data:
