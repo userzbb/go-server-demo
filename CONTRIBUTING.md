@@ -1,19 +1,16 @@
-# 贡献指南（开发规范）
+# 贡献指南
 
-## Git 提交规范
-- `feat:` 新功能
-- `fix:` Bug 修复
-- `docs:` 文档更新
-- `refactor:` 重构
-- `perf:` 性能优化
-- `test:` 测试相关
-- `chore:` 构建/工具变动
+在参与开发前，请阅读并遵守以下规范。
 
-## 代码规范
-1. 所有 `pkg/` 下的公开函数必须有注释（以函数名开头）。
-2. 错误处理：必须显式处理 `error`，禁止忽略（`_`）。
-3. 并发安全：共享数据必须使用 `sync.Mutex` 或 Channel。
+## 开发规范
+所有开发活动必须遵守 [docs/STANDARDS.md](docs/STANDARDS.md)。
 
 ## 提交前自检
-1. 运行 `make ci` 确保本地检查通过。
-2. 确保新增代码有对应的单元测试（`*_test.go`）。
+1. 运行 `make ci` 确保本地检查通过
+2. 确保新增代码有对应的单元测试
+3. 确保提交信息符合规范（`feat:` / `fix:` / `docs:` / `chore:`）
+
+## Git 工作流
+1. 从 `develop` 分支创建功能分支：`git checkout -b feature/xxx`
+2. 开发完成后推送到远程仓库
+3. 提交 Pull Request 合并到 `develop`
