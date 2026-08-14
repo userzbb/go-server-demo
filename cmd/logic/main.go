@@ -5,5 +5,5 @@ package main
 import "fmt"
 
 func main() {
-    fmt.Println("Logic Service 已启动（占位）")
+	fmt.Println("Logic Service 已启动（占位）")
 }
