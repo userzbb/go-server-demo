@@ -1,0 +1,15 @@
+.git/
+.gitignore
+.github/
+docs/
+scripts/
+test/
+deployments/
+Makefile
+*.md
+*.log
+*.test
+coverage.*
+.env
+.idea/
+.vscode/

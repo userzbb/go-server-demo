@@ -3,12 +3,14 @@
 高性能分布式游戏服务器
 
 ## 快速开始
-- Go 1.24+
+- Go 1.26+
 - Make
 - golangci-lint
 
 ### 运行服务器
 ```bash
+make db-up && make db-init   # 启动数据库容器并初始化表结构
+export JWT_SECRET=dev-secret # JWT 密钥必填，否则网关拒绝启动
 make run
 ```
 

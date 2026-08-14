@@ -5,5 +5,5 @@ package main
 import "fmt"
 
 func main() {
-    fmt.Println("Center Service 已启动（占位）")
+	fmt.Println("Center Service 已启动（占位）")
 }

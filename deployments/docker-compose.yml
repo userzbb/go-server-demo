@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: omega-postgres
+    environment:
+      POSTGRES_USER: omega
+      POSTGRES_PASSWORD: omega123
+      POSTGRES_DB: omega
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    container_name: omega-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: omega
+      MONGO_INITDB_ROOT_PASSWORD: omega123
+      MONGO_INITDB_DATABASE: omega
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: omega-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:

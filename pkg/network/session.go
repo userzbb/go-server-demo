@@ -1,124 +1,152 @@
+// Package network 提供游戏服务器的网络层功能，包括 TCP 连接管理、消息编解码和会话控制
 package network
 
 import (
-    "log"
-    "net"
-    "sync"
+	"encoding/binary"
+	"log"
+	"net"
+	"sync"
 )
 
-// Session 管理一个客户端连接
+// Session 管理一个客户端的 TCP 连接，负责收发消息和生命周期控制
 type Session struct {
-    conn     net.Conn
-    sendChan chan []byte
-    wg       sync.WaitGroup
-    closed   bool
-    mu       sync.Mutex
-    onMessage func(msgID uint32, body []byte)
+	conn      net.Conn
+	sendChan  chan []byte
+	wg        sync.WaitGroup
+	closed    bool
+	mu        sync.Mutex
+	onMessage func(msgID uint32, body []byte)
+	logger    Logger
 }
 
-// NewSession 创建 Session
+// NewSession 创建一个新的 Session 实例
 func NewSession(conn net.Conn) *Session {
-    return &Session{
-        conn:     conn,
-        sendChan: make(chan []byte, 100),
-    }
+	return &Session{
+		conn:     conn,
+		sendChan: make(chan []byte, 100),
+	}
 }
 
-// SetOnMessage 设置消息接收回调
+// SetOnMessage 设置消息接收回调函数，当收到完整包时自动调用
 func (s *Session) SetOnMessage(handler func(msgID uint32, body []byte)) {
-    s.onMessage = handler
+	s.onMessage = handler
 }
 
-// Send 发送数据
+// SetLogger 注入自定义日志器（如 Zap），未注入时回退到标准库 log
+func (s *Session) SetLogger(l Logger) {
+	s.logger = l
+}
+
+// logInfo 输出普通级别日志，优先使用注入的 Logger
+func (s *Session) logInfo(format string, args ...any) {
+	if s.logger != nil {
+		s.logger.Infof(format, args...)
+		return
+	}
+	log.Printf(format, args...)
+}
+
+// logError 输出错误级别日志，优先使用注入的 Logger
+func (s *Session) logError(format string, args ...any) {
+	if s.logger != nil {
+		s.logger.Errorf(format, args...)
+		return
+	}
+	log.Printf(format, args...)
+}
+
+// Send 将数据放入发送队列，由写协程异步发送
 func (s *Session) Send(data []byte) {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    if s.closed {
-        return
-    }
-    buf := make([]byte, len(data))
-    copy(buf, data)
-    s.sendChan <- buf
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
+	buf := make([]byte, len(data))
+	copy(buf, data)
+	s.sendChan <- buf
 }
 
-// Close 关闭连接
+// SendMessage 编码并发送一条完整消息（4字节总长度 + 4字节消息ID + body）
+func (s *Session) SendMessage(msgID uint32, body []byte) {
+	s.Send(Encode(msgID, body))
+}
+
+// Close 关闭连接并释放资源
 func (s *Session) Close() {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    if s.closed {
-        return
-    }
-    s.closed = true
-    close(s.sendChan)
-    s.conn.Close()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
+	s.closed = true
+	close(s.sendChan)
+	_ = s.conn.Close()
 }
 
-// Run 启动读写协程，阻塞直到读写结束
+// Run 启动读写协程，阻塞直到连接关闭
 func (s *Session) Run() {
-    s.wg.Add(2)
-    go s.handleRead()
-    go s.handleWrite()
-    s.wg.Wait()
+	s.wg.Add(2)
+	go s.handleRead()
+	go s.handleWrite()
+	s.wg.Wait()
 }
 
-// handleRead 读协程（使用 Decode 解析消息）
+// handleRead 读协程：循环读取数据并解析完整包
 func (s *Session) handleRead() {
-    defer s.wg.Done()
-    defer s.Close()
+	defer s.wg.Done()
+	defer s.Close()
 
-    // 使用缓冲区累积数据，处理粘包
-    var buffer []byte
-    buf := make([]byte, 1024)
+	var buffer []byte
+	buf := make([]byte, 1024)
 
-    for {
-        n, err := s.conn.Read(buf)
-        if err != nil {
-            log.Printf("读取错误: %v", err)
-            break
-        }
+	for {
+		n, err := s.conn.Read(buf)
+		if err != nil {
+			s.logError("读取错误: %v", err)
+			break
+		}
 
-        // 将新数据追加到缓冲区
-        buffer = append(buffer, buf[:n]...)
+		buffer = append(buffer, buf[:n]...)
 
-        // 尝试解析完整包
-        for len(buffer) >= 8 { // 至少需要8字节（4字节长度+4字节消息ID）
-            // 读取包总长度（前4字节）
-            totalLen := int(buffer[0])<<24 | int(buffer[1])<<16 | int(buffer[2])<<8 | int(buffer[3])
-            if len(buffer) < totalLen {
-                break // 数据不够，等待更多数据
-            }
+		for len(buffer) >= 8 {
+			totalLen := int(binary.BigEndian.Uint32(buffer[0:4]))
+			if totalLen < 8 || totalLen > MaxPacketSize {
+				s.logError("非法包长度: %d，关闭连接", totalLen)
+				s.Close()
+				return
+			}
+			if len(buffer) < totalLen {
+				break
+			}
 
-            // 取出完整包
-            packet := buffer[:totalLen]
-            buffer = buffer[totalLen:]
+			packet := buffer[:totalLen]
+			buffer = buffer[totalLen:]
 
-            // 使用 Decode 解析
-            msgID, body, err := Decode(packet)
-            if err != nil {
-                log.Printf("拆包错误: %v", err)
-                continue
-            }
+			msgID, body, err := Decode(packet)
+			if err != nil {
+				s.logError("拆包错误: %v", err)
+				continue
+			}
 
-            // 打印解析结果
-            log.Printf("收到消息 [ID=%d] 长度=%d 内容=%s", msgID, len(body), string(body))
+			s.logInfo("收到消息 [ID=%d] 长度=%d 内容=%s", msgID, len(body), string(body))
 
-            // 如果有回调，调用上层业务逻辑
-            if s.onMessage != nil {
-                s.onMessage(msgID, body)
-            }
-        }
-    }
+			if s.onMessage != nil {
+				s.onMessage(msgID, body)
+			}
+		}
+	}
 }
 
-// handleWrite 写协程
+// handleWrite 写协程：从发送队列取数据并发送给客户端
 func (s *Session) handleWrite() {
-    defer s.wg.Done()
-    for data := range s.sendChan {
-        _, err := s.conn.Write(data)
-        if err != nil {
-            log.Printf("发送错误: %v", err)
-            s.Close()
-            break
-        }
-    }
+	defer s.wg.Done()
+	for data := range s.sendChan {
+		_, err := s.conn.Write(data)
+		if err != nil {
+			s.logError("发送错误: %v", err)
+			s.Close()
+			break
+		}
+	}
 }
