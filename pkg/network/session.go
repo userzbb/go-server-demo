@@ -16,6 +16,7 @@ type Session struct {
 	closed    bool
 	mu        sync.Mutex
 	onMessage func(msgID uint32, body []byte)
+	logger    Logger
 }
 
 // NewSession 创建一个新的 Session 实例
@@ -29,6 +30,20 @@ func NewSession(conn net.Conn) *Session {
 // SetOnMessage 设置消息接收回调函数，当收到完整包时自动调用
 func (s *Session) SetOnMessage(handler func(msgID uint32, body []byte)) {
 	s.onMessage = handler
+}
+
+// SetLogger 注入自定义日志器（如 Zap），未注入时回退到标准库 log
+func (s *Session) SetLogger(l Logger) {
+	s.logger = l
+}
+
+// logf 输出网络层日志，优先使用注入的 Logger
+func (s *Session) logf(format string, args ...any) {
+	if s.logger != nil {
+		s.logger.Printf(format, args...)
+		return
+	}
+	log.Printf(format, args...)
 }
 
 // Send 将数据放入发送队列，由写协程异步发送
@@ -74,7 +89,7 @@ func (s *Session) handleRead() {
 	for {
 		n, err := s.conn.Read(buf)
 		if err != nil {
-			log.Printf("读取错误: %v", err)
+			s.logf("读取错误: %v", err)
 			break
 		}
 
@@ -83,7 +98,7 @@ func (s *Session) handleRead() {
 		for len(buffer) >= 8 {
 			totalLen := int(binary.BigEndian.Uint32(buffer[0:4]))
 			if totalLen < 8 || totalLen > MaxPacketSize {
-				log.Printf("非法包长度: %d，关闭连接", totalLen)
+				s.logf("非法包长度: %d，关闭连接", totalLen)
 				s.Close()
 				return
 			}
@@ -96,11 +111,11 @@ func (s *Session) handleRead() {
 
 			msgID, body, err := Decode(packet)
 			if err != nil {
-				log.Printf("拆包错误: %v", err)
+				s.logf("拆包错误: %v", err)
 				continue
 			}
 
-			log.Printf("收到消息 [ID=%d] 长度=%d 内容=%s", msgID, len(body), string(body))
+			s.logf("收到消息 [ID=%d] 长度=%d 内容=%s", msgID, len(body), string(body))
 
 			if s.onMessage != nil {
 				s.onMessage(msgID, body)
@@ -115,7 +130,7 @@ func (s *Session) handleWrite() {
 	for data := range s.sendChan {
 		_, err := s.conn.Write(data)
 		if err != nil {
-			log.Printf("发送错误: %v", err)
+			s.logf("发送错误: %v", err)
 			s.Close()
 			break
 		}
