@@ -1,4 +1,4 @@
-.PHONY: help lint test build ci db-up db-down db-status db-test db-init db-backup db-restore docker-build
+.PHONY: help lint test build run ci db-up db-down db-status db-test db-init db-backup db-restore docker-build
 
 help:
 	@echo "📦 Omega Server Makefile"
@@ -7,6 +7,7 @@ help:
 	@echo "  make lint    - 运行代码质量检查"
 	@echo "  make test    - 运行单元测试并生成覆盖率报告"
 	@echo "  make build   - 编译所有服务到 bin/ 目录"
+	@echo "  make run     - 本地运行网关服务"
 	@echo "  make ci      - 本地 CI 检查（lint + test + build）"
 	@echo ""
 	@echo "数据库管理 (Podman):"
@@ -30,8 +31,14 @@ test:
 	@echo "✅ 测试完成，覆盖率报告: coverage.html"
 
 build:
-	go build -ldflags="-s -w" -o bin/gate cmd/gate/main.go
+	mkdir -p bin
+	go build -ldflags="-s -w" -o bin/gate ./cmd/gate
+	go build -ldflags="-s -w" -o bin/logic ./cmd/logic
+	go build -ldflags="-s -w" -o bin/center ./cmd/center
 	@echo "✅ 编译完成，产物在 bin/ 目录"
+
+run:
+	go run ./cmd/gate
 
 ci:
 	@echo "🔄 开始 CI 检查..."
