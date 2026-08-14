@@ -1,0 +1,14 @@
+# Omega Server 开发环境配置
+
+server:
+  name: omega-gate-dev
+  host: 0.0.0.0
+  port: 8888
+
+log:
+  level: debug
+  format: console
+
+game:
+  tick_rate: 30      # 每秒更新频率
+  max_room_size: 10  # 房间最大人数
