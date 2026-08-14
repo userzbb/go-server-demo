@@ -4,11 +4,43 @@ server:
   name: omega-gate-dev
   host: 0.0.0.0
   port: 8888
+  read_timeout: 30
+  write_timeout: 30
 
 log:
   level: debug
   format: console
+  output: stdout
 
 game:
-  tick_rate: 30      # 每秒更新频率
-  max_room_size: 10  # 房间最大人数
+  tick_rate: 30
+  max_room_size: 10
+  heartbeat_interval: 10
+  heartbeat_timeout: 30
+
+# PostgreSQL 配置（核心数据）
+postgres:
+  host: localhost
+  port: 5432
+  user: omega
+  password: omega123
+  database: omega
+  max_open_conns: 20
+  max_idle_conns: 10
+
+# MongoDB 配置（灵活数据/日志）
+mongodb:
+  host: localhost
+  port: 27017
+  user: omega
+  password: omega123
+  database: omega
+  max_pool_size: 100
+
+# Redis 配置（缓存/实时数据）
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
