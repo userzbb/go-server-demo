@@ -13,12 +13,18 @@ import (
 
 // LoginHandler 处理登录请求（MsgID=1001 → 1002）
 type LoginHandler struct {
-	auth *service.AuthService
+	auth    *service.AuthService
+	onLogin func(sess *network.Session, playerID string)
 }
 
 // NewLoginHandler 创建登录处理器
 func NewLoginHandler(auth *service.AuthService) *LoginHandler {
 	return &LoginHandler{auth: auth}
+}
+
+// SetOnLogin 设置登录成功回调，用于会话绑定玩家身份等收尾工作
+func (h *LoginHandler) SetOnLogin(fn func(sess *network.Session, playerID string)) {
+	h.onLogin = fn
 }
 
 // Handle 解析登录请求并回发登录响应
@@ -49,6 +55,9 @@ func (h *LoginHandler) Handle(sess *network.Session, body []byte) error {
 		}
 	}
 
+	if h.onLogin != nil {
+		h.onLogin(sess, player.ID)
+	}
 	return reply(sess, protocol.MsgIDLoginResponse, protocol.LoginResponse{
 		Code:    protocol.CodeOK,
 		Message: "登录成功",

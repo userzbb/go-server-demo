@@ -17,6 +17,7 @@ type Session struct {
 	mu        sync.Mutex
 	onMessage func(msgID uint32, body []byte)
 	logger    Logger
+	playerID  string
 }
 
 // NewSession 创建一个新的 Session 实例
@@ -30,6 +31,20 @@ func NewSession(conn net.Conn) *Session {
 // SetOnMessage 设置消息接收回调函数，当收到完整包时自动调用
 func (s *Session) SetOnMessage(handler func(msgID uint32, body []byte)) {
 	s.onMessage = handler
+}
+
+// SetPlayerID 绑定玩家 ID（登录成功后调用），重复调用覆盖旧值
+func (s *Session) SetPlayerID(playerID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.playerID = playerID
+}
+
+// PlayerID 返回绑定的玩家 ID，未登录时为空字符串
+func (s *Session) PlayerID() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.playerID
 }
 
 // SetLogger 注入自定义日志器（如 Zap），未注入时回退到标准库 log
