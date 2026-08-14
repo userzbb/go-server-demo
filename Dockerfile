@@ -1,10 +1,10 @@
 # 构建阶段
-FROM docker.io/library/golang:1.24-alpine AS builder
+FROM docker.io/library/golang:1.26-alpine AS builder
 
 WORKDIR /app
 
 # 复制依赖文件并下载
-COPY go.mod go.sum ./
+COPY go.mod go.sum* ./
 RUN go mod download
 
 # 复制源代码并编译网关服务

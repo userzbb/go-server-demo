@@ -6,7 +6,7 @@ Omega Server 开发者入门指南
 Omega Server 是基于 Go 的分布式游戏服务器，支持 TCP 长连接和多服务拆分。
 
 2. 技术栈
-- Go 1.24+
+- Go 1.26+
 - 原生 net 包
 - PostgreSQL（核心数据）
 - MongoDB（灵活数据）
