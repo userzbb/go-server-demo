@@ -1,3 +1,4 @@
+// Package main 是一个测试客户端，用于验证游戏服务器的网络通信功能
 package main
 
 import (
@@ -12,20 +13,19 @@ func main() {
         fmt.Println("连接失败:", err)
         return
     }
-    defer conn.Close()
+    defer func() { _ = conn.Close() }()
     fmt.Println("连接服务器成功")
 
-    // 登录请求：消息ID=1001，body=JSON格式
-    body := []byte(`{"username":"player1","password":"123456"}`)
-    packet := network.Encode(1001, body)
+    msgID := uint32(1001)
+    body := []byte("hello server")
+    packet := network.Encode(msgID, body)
     _, err = conn.Write(packet)
     if err != nil {
         fmt.Println("发送失败:", err)
         return
     }
-    fmt.Println("发送登录请求成功")
+    fmt.Println("发送消息成功")
 
-    // 接收服务器的回复
     buf := make([]byte, 1024)
     n, err := conn.Read(buf)
     if err != nil {
