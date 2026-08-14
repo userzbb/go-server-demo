@@ -24,7 +24,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('go.mod') }}
 
       - name: Install golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci-lint/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.12.2
+        run: |
+          set -euo pipefail
+          curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.12.2
+          golangci-lint --version
 
       - name: Lint
         run: make lint
