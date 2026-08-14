@@ -2,6 +2,7 @@
 package network
 
 import (
+	"encoding/binary"
 	"log"
 	"net"
 	"sync"
@@ -80,7 +81,12 @@ func (s *Session) handleRead() {
 		buffer = append(buffer, buf[:n]...)
 
 		for len(buffer) >= 8 {
-			totalLen := int(buffer[0])<<24 | int(buffer[1])<<16 | int(buffer[2])<<8 | int(buffer[3])
+			totalLen := int(binary.BigEndian.Uint32(buffer[0:4]))
+			if totalLen < 8 || totalLen > MaxPacketSize {
+				log.Printf("非法包长度: %d，关闭连接", totalLen)
+				s.Close()
+				return
+			}
 			if len(buffer) < totalLen {
 				break
 			}

@@ -6,6 +6,9 @@ import (
 	"errors"
 )
 
+// MaxPacketSize 单个消息包的最大长度（4MB），超过该长度视为非法包
+const MaxPacketSize = 4 << 20
+
 // Encode 打包消息：4字节总长度 + 4字节消息ID + body
 func Encode(msgID uint32, body []byte) []byte {
 	totalLen := 4 + 4 + len(body)
@@ -25,6 +28,9 @@ func Decode(data []byte) (uint32, []byte, error) {
 	}
 
 	totalLen := binary.BigEndian.Uint32(data[0:4])
+	if totalLen > MaxPacketSize {
+		return 0, nil, errors.New("包长度超过限制")
+	}
 	if int(totalLen) != len(data) {
 		return 0, nil, errors.New("包长度不匹配")
 	}
