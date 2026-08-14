@@ -26,6 +26,16 @@
 - .editorconfig 统一编辑器配置
 - LICENSE（MIT 许可证）
 
+### Added（v0.1 MVP 第一阶段）
+- 配置加载（internal/config）：Viper + 环境变量覆盖，JWT 密钥仅允许环境变量注入
+- 结构化日志（internal/logger）：Zap 封装，支持级别/格式/服务名配置
+- 玩家模型与 PostgreSQL 数据访问层（internal/model + internal/repository，pgx）
+- 注册/登录鉴权（internal/service）：bcrypt 密码哈希 + JWT HS256 令牌
+- 消息路由框架（internal/handler）：按消息 ID 分发，登录/注册/心跳处理器
+- 网关正式接线（cmd/gate）：配置、日志、数据库、路由全链路
+- 协议新增注册消息（1003/1004）与错误码 7（用户名已被占用）
+- 网络层支持日志器注入（pkg/network.Logger）
+
 ### Changed
 
 ### Fixed

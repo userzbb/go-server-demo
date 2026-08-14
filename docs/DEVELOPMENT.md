@@ -26,12 +26,15 @@ test/         测试工具
 deployments/  容器和 K8s 部署文件
 
 4. 模块依赖关系
-- pkg/network 被 cmd/gate 和 test/client 使用
-- internal/model 被 handler 和 service 使用
-- internal/repository 依赖 model 和数据库
-- internal/service 依赖 model 和 repository
-- internal/handler 依赖 service 和 pkg/network
-- cmd/gate 依赖 pkg/network 和 internal/handler
+- pkg/network 被 cmd/gate、internal/handler 和 test/client 使用
+- pkg/protocol 被 internal/handler、internal/service、cmd/gate 和 test/client 使用
+- internal/config 被 cmd/gate 使用
+- internal/logger 被 cmd/gate 使用
+- internal/model 被 internal/repository 和 internal/service 使用
+- internal/repository 依赖 model 和数据库，被 internal/service 和 cmd/gate 使用
+- internal/service 依赖 model、repository、protocol
+- internal/handler 依赖 service、protocol、network
+- cmd/gate 依赖 config、logger、repository、service、handler、network、protocol
 
 5. 常用命令
 make lint       代码检查

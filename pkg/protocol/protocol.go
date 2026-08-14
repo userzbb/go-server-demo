@@ -3,10 +3,14 @@ package protocol
 
 // 消息 ID 常量，范围分配见 docs/PROTOCOL.md
 const (
-	// MsgIDLoginRequest 登录/注册请求
+	// MsgIDLoginRequest 登录请求
 	MsgIDLoginRequest uint32 = 1001
-	// MsgIDLoginResponse 登录/注册响应
+	// MsgIDLoginResponse 登录响应
 	MsgIDLoginResponse uint32 = 1002
+	// MsgIDRegisterRequest 注册请求
+	MsgIDRegisterRequest uint32 = 1003
+	// MsgIDRegisterResponse 注册响应
+	MsgIDRegisterResponse uint32 = 1004
 	// MsgIDHeartbeatRequest 心跳请求
 	MsgIDHeartbeatRequest uint32 = 9001
 	// MsgIDHeartbeatResponse 心跳响应
@@ -23,9 +27,11 @@ const (
 	CodeBadRequest int = 2
 	// CodeInvalidToken Token 无效或过期
 	CodeInvalidToken int = 6
+	// CodeUsernameTaken 用户名已被占用
+	CodeUsernameTaken int = 7
 )
 
-// LoginRequest 登录/注册请求体（MsgID=1001）
+// LoginRequest 登录/注册请求体（MsgID=1001/1003）
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
