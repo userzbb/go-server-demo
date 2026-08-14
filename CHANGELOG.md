@@ -36,6 +36,14 @@
 - 协议新增注册消息（1003/1004）与错误码 7（用户名已被占用）
 - 网络层支持日志器注入（pkg/network.Logger）
 
+### Added（v0.2 Alpha）
+- 房间模型与内存房间管理器（internal/model.Room + internal/service.RoomManager）
+- 会话玩家绑定（pkg/network.Session.PlayerID/SetPlayerID）与会话注册表（SessionRegistry）
+- 房间处理器：创建（2001/2002）、加入（2003/2004）、离开（2005/2006）
+- 移动同步（internal/handler.MoveHandler）：3001 请求 → 3002 广播给同房间其他玩家
+- 登录成功钩子：会话绑定身份并注册，断开连接自动离开房间
+- 协议新增 2005/2006、3001/3002 消息定义与状态同步广播
+
 ### Changed
 
 ### Fixed

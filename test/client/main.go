@@ -42,7 +42,56 @@ func run() error {
 	}
 
 	// 心跳检测
-	return sendHeartbeat(conn)
+	if err := sendHeartbeat(conn); err != nil {
+		return fmt.Errorf("心跳失败: %w", err)
+	}
+
+	// 房间流程：创建房间 + 移动同步
+	roomID, err := createRoom(conn, "我的房间", 10)
+	if err != nil {
+		return fmt.Errorf("创建房间失败: %w", err)
+	}
+	fmt.Printf("✅ 创建房间成功: %s\n", roomID)
+
+	if err := sendMove(conn, 1.0, 2.0, 0.1, 0.0); err != nil {
+		return fmt.Errorf("移动同步失败: %w", err)
+	}
+	fmt.Println("✅ 移动同步已发送（同房间其他玩家将收到广播）")
+	return nil
+}
+
+// createRoom 发送创建房间请求并解析响应
+func createRoom(conn net.Conn, roomName string, maxPlayers int) (string, error) {
+	replyID, replyBody, err := request(conn, protocol.MsgIDCreateRoomRequest, protocol.CreateRoomRequest{
+		RoomName:   roomName,
+		MaxPlayers: maxPlayers,
+	})
+	if err != nil {
+		return "", fmt.Errorf("创建房间请求: %w", err)
+	}
+	var resp protocol.CreateRoomResponse
+	if err := json.Unmarshal(replyBody, &resp); err != nil {
+		return "", fmt.Errorf("解析创建房间响应 [ID=%d]: %w", replyID, err)
+	}
+	if replyID != protocol.MsgIDCreateRoomResponse {
+		return "", fmt.Errorf("创建房间响应 ID 不匹配: %d", replyID)
+	}
+	if resp.Code != protocol.CodeOK {
+		return "", fmt.Errorf("创建房间失败: code=%d %s", resp.Code, resp.Message)
+	}
+	return resp.RoomID, nil
+}
+
+// sendMove 发送移动同步请求（无响应，服务端广播给同房间其他玩家）
+func sendMove(conn net.Conn, x, y, vx, vy float64) error {
+	body, err := json.Marshal(protocol.MoveSyncRequest{X: x, Y: y, VX: vx, VY: vy})
+	if err != nil {
+		return fmt.Errorf("编码移动请求: %w", err)
+	}
+	if _, err := conn.Write(network.Encode(protocol.MsgIDMoveSyncRequest, body)); err != nil {
+		return fmt.Errorf("发送移动请求: %w", err)
+	}
+	return nil
 }
 
 // loginOrRegister 先登录，收到"用户名或密码错误"则注册后重试
