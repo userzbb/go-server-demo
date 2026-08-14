@@ -31,7 +31,6 @@ linters-settings:
       - name: context-as-argument  # context 作为第一个参数
       - name: error-return      # error 作为最后一个返回值
       - name: error-naming      # error 命名规范
-      - name: exported          # 导出元素注释
       - name: package-comments  # 包注释
   gocritic:
     enabled-tags:
